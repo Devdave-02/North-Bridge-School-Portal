@@ -1,66 +1,514 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Assignment Upload</title>
-  <link rel="stylesheet" href="Assignment.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard - North Bridge</title>
+  <link rel="stylesheet" href="admin.css" />
 </head>
 <body>
-  <div class="upload-container">
-    <h2>📘 Upload Assignment</h2>
-    
-    <form id="assignmentForm">
-      <label>Assignment Title</label>
-      <input type="text" id="title" placeholder="Enter assignment title" required>
-      
-      <label>Description</label>
-      <textarea id="description" placeholder="Enter assignment details" required></textarea>
-      
-      <label>Deadline</label>
-      <input type="date" id="deadline" required>
-      
-      <label>Upload File (PDF/DOCX)</label>
-      <input type="file" id="fileUpload" accept=".pdf,.doc,.docx" required>
-      
-      <button type="submit" class="btn">Upload Assignment</button>
-    </form>
 
-    <!-- Uploaded Assignments -->
-    <div class="assignment-list">
-      <h3>Uploaded Assignments</h3>
-      <ul id="assignmentList">
-        <!-- Assignments will appear here dynamically -->
-      </ul>
-    </div>
-  </div>
+  <div class="admin-container">
+    <header>
+      <h1>Admin-Panel</h1>
 
-  <script>
-    const form = document.getElementById("assignmentForm");
-    const assignmentList = document.getElementById("assignmentList");
+    </header>
 
-    form.addEventListener("submit", function(e) {
-      e.preventDefault();
+    <!-- LECTURERS -->
+    <section class="admin-section" id="lecturers-section">
+      <div class="section-head">
+        <h2>Lecturers</h2>
+        <button class="btn btn-primary" data-add="lecturers">+ Add Lecturer</button>
+      </div>
+      <div class="table-wrap">
+        <table id="lecturersTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Department</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody><!-- injected by JS --></tbody>
+        </table>
+      </div>
+    </section>
 
-      const title = document.getElementById("title").value;
-      const deadline = document.getElementById("deadline").value;
-      const file = document.getElementById("fileUpload").files[0];
+    <!-- STUDENTS -->
+    <section class="admin-section" id="students-section">
+      <div class="section-head">
+        <h2>Students</h2>
+        <button class="btn btn-primary" data-add="students">+ Add Student</button>
+      </div>
+      <div class="table-wrap">
+        <table id="studentsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Level</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody><!-- injected by JS --></tbody>
+        </table>
+      </div>
+    </section>
 
-      if (!file) {
-        alert("Please select a file ❌");
-        return;
-      }
+    <!-- COURSES -->
+    <section class="admin-section" id="courses-section">
+      <div class="section-head">
+        <h2>Courses</h2>
+        <button class="btn btn-primary" data-add="courses">+ Add Course</button>
+      </div>
+      <div class="table-wrap">
+        <table id="coursesTable">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Title</th>
+              <th>Department</th>
+              <th>Unit</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody><!-- injected by JS --></tbody>
+        </table>
+      </div>
+    </section>
 
-      // Add to assignment list
-      const li = document.createElement("li");
-      li.innerHTML = `<strong>${title}</strong> (Deadline: ${deadline}) - 📂 ${file.name}`;
-      assignmentList.appendChild(li);
+    <!-- ASSIGNMENTS -->
+    <section class="admin-section" id="assignments-section">
+      <div class="section-head">
+        <h2>Assignments</h2>
+        <button class="btn btn-primary" data-add="assignments">+ Add Assignment</button>
+      </div>
+      <div class="table-wrap">
+        <table id="assignmentsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Course</th>
+              <th>Due Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody><!-- injected by JS --></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
 
-      // Reset form
-      form.reset();
-      alert("✅ Assignment uploaded successfully!");
-    });
-  </script>
+  <!-- EDIT / ADD MODAL -->
+  <div class="modal hidden" id="editorModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="modalTitle">Edit</h3>
+        <button class="icon-btn" id="closeEditor" aria-label="Close">✖</button>
+      </div>
+      <form id="editorForm" novalidate>
+        <div id="formFields"><!-- dynamic fields --></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-light" id="cancelEditor">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveEditor">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SMALL TOAST -->
+  <div id="toast" class="toast hidden"></div>
+<script>
+// ====== DATA (in-memory) ======
+let db = {
+  lecturers: [
+    { id:1, name: "MR. DAVID", email: "david20@gmail.com", department: "MLS" },
+    { id: 2, name: "MR. LANRE", email: "lanre22@gmail.com", department: "PHYSIOLOGY" },
+  {id:3, name: "MR. EMMANUEL", email: "eokunola99@gmail.com", department: "ANATOMY" },
+{id: 4, name: "MR. BAMIDELE", email: "bamidele24@gmail.com", department: "NURSING" },
+{id: 5, name: "MR. TOSIN", email: "tosin25@gmail.com", department: "MEDICINE" },
+  ],
+  students: [
+    { id: 1, name: "TIMOTHY", email: "timothy@gmail.com", level: "400L" },
+    { id: 2, name: "GRACE", email: "grace@gmail.com", level: "300L" },
+  ],
+  courses: [
+    { code: "MLS101", title: "INTRO TO MLS", department: "MLS", unit: 3 },
+    { code: "MED 101", title: "INTRO TO MEDICAL TECHNOLOGY", department: "MEDICINE", unit: 2 },
+  ],
+  assignments: [
+    { id: "A1", title: "Introduction to Mls", course: "MLS101", due: "2025-09-30" },
+    { id: "A2", title: "Introduction to medicine", course: "MED101", due: "2025-10-05" },
+  ]
+};
+
+// ====== HELPERS ======
+const $ = (sel, ctx=document) => ctx.querySelector(sel);
+const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+
+function toast(msg){
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+  setTimeout(()=>el.classList.add("hidden"), 1800);
+}
+
+// ====== RENDER TABLES ======
+function renderLecturers(){
+  const tbody = $("#lecturersTable tbody");
+  tbody.innerHTML = db.lecturers.map(l => `
+    <tr data-type="lecturers" data-key="${l.id}">
+      <td data-label="ID">${l.id}</td>
+      <td data-label="Name">${l.name}</td>
+      <td data-label="Email">${l.email}</td>
+      <td data-label="Department">${l.department}</td>
+      <td data-label="Actions">
+        <button class="btn btn-primary action-btn" data-edit>Edit</button>
+        <button class="btn btn-danger action-btn" data-delete>Delete</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function renderStudents(){
+  const tbody = $("#studentsTable tbody");
+  tbody.innerHTML = db.students.map(s => `
+    <tr data-type="students" data-key="${s.id}">
+      <td data-label="ID">${s.id}</td>
+      <td data-label="Name">${s.name}</td>
+      <td data-label="Email">${s.email}</td>
+      <td data-label="Level">${s.level}</td>
+      <td data-label="Actions">
+        <button class="btn btn-primary action-btn" data-edit>Edit</button>
+        <button class="btn btn-danger action-btn" data-delete>Delete</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function renderCourses(){
+  const tbody = $("#coursesTable tbody");
+  tbody.innerHTML = db.courses.map(c => `
+    <tr data-type="courses" data-key="${c.code}">
+      <td data-label="Code">${c.code}</td>
+      <td data-label="Title">${c.title}</td>
+      <td data-label="Department">${c.department}</td>
+      <td data-label="Unit">${c.unit}</td>
+      <td data-label="Actions">
+        <button class="btn btn-primary action-btn" data-edit>Edit</button>
+        <button class="btn btn-danger action-btn" data-delete>Delete</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function renderAssignments(){
+  const tbody = $("#assignmentsTable tbody");
+  tbody.innerHTML = db.assignments.map(a => `
+    <tr data-type="assignments" data-key="${a.id}">
+      <td data-label="ID">${a.id}</td>
+      <td data-label="Title">${a.title}</td>
+      <td data-label="Course">${a.course}</td>
+      <td data-label="Due Date">${a.due}</td>
+      <td data-label="Actions">
+        <button class="btn btn-primary action-btn" data-edit>Edit</button>
+        <button class="btn btn-danger action-btn" data-delete>Delete</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function renderAll(){
+  renderLecturers();
+  renderStudents();
+  renderCourses();
+  renderAssignments();
+}
+
+// ====== FIND + UPDATE/DELETE HELPERS ======
+function getCollectionAndKey(tr){
+  const type = tr.getAttribute("data-type");
+  const key = tr.getAttribute("data-key");
+  return { type, key };
+}
+
+function removeFromCollection(type, key){
+  if(type === "lecturers"){
+    db.lecturers = db.lecturers.filter(x => String(x.id) !== String(key));
+  } else if(type === "students"){
+    db.students = db.students.filter(x => String(x.id) !== String(key));
+  } else if(type === "courses"){
+    db.courses = db.courses.filter(x => String(x.code) !== String(key));
+  } else if(type === "assignments"){
+    db.assignments = db.assignments.filter(x => String(x.id) !== String(key));
+  }
+}
+
+function getItem(type, key){
+  if(type === "lecturers"){
+    return db.lecturers.find(x => String(x.id) === String(key));
+  } else if(type === "students"){
+    return db.students.find(x => String(x.id) === String(key));
+  } else if(type === "courses"){
+    return db.courses.find(x => String(x.code) === String(key));
+  } else {
+    return db.assignments.find(x => String(x.id) === String(key));
+  }
+}
+
+// ====== MODAL EDITOR (ADD / EDIT) ======
+const modal = $("#editorModal");
+const modalTitle = $("#modalTitle");
+const form = $("#editorForm");
+const formFields = $("#formFields");
+let editorState = { mode:"edit", type:null, key:null }; // mode: 'edit' | 'add'
+
+function openModal({mode, type, key=null}){
+  editorState = { mode, type, key };
+  modalTitle.textContent = (mode === "add" ? "Add " : "Edit ") + type.slice(0,1).toUpperCase() + type.slice(1);
+  buildForm(type, key);
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden","false");
+}
+
+function closeModal(){
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden","true");
+  form.reset();
+}
+
+$("#closeEditor").addEventListener("click", closeModal);
+$("#cancelEditor").addEventListener("click", closeModal);
+
+// Build dynamic fields by type
+function buildForm(type, key){
+  const item = key ? getItem(type, key) : null;
+  let html = "";
+
+  if(type === "lecturers"){
+    html = `
+      <div class="form-row">
+        <div class="form-field">
+          <label>ID</label>
+          <input type="number" name="id" value="${item?.id ?? ""}" ${editorState.mode==="edit" ? "readonly" : ""} required>
+        </div>
+        <div class="form-field">
+          <label>Name</label>
+          <input type="text" name="name" value="${item?.name ?? ""}" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Email</label>
+          <input type="email" name="email" value="${item?.email ?? ""}" required>
+        </div>
+        <div class="form-field">
+          <label>Department</label>
+          <input type="text" name="department" value="${item?.department ?? ""}" required>
+        </div>
+      </div>
+    `;
+  }
+
+  if(type === "students"){
+    html = `
+      <div class="form-row">
+        <div class="form-field">
+          <label>ID</label>
+          <input type="number" name="id" value="${item?.id ?? ""}" ${editorState.mode==="edit" ? "readonly" : ""} required>
+        </div>
+        <div class="form-field">
+          <label>Name</label>
+          <input type="text" name="name" value="${item?.name ?? ""}" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Email</label>
+          <input type="email" name="email" value="${item?.email ?? ""}" required>
+        </div>
+        <div class="form-field">
+          <label>Level</label>
+          <input type="text" name="level" value="${item?.level ?? ""}" placeholder="e.g., 300L" required>
+        </div>
+      </div>
+    `;
+  }
+
+  if(type === "courses"){
+    html = `
+      <div class="form-row">
+        <div class="form-field">
+          <label>Code</label>
+          <input type="text" name="code" value="${item?.code ?? ""}" ${editorState.mode==="edit" ? "readonly" : ""} required>
+        </div>
+        <div class="form-field">
+          <label>Title</label>
+          <input type="text" name="title" value="${item?.title ?? ""}" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Department</label>
+          <input type="text" name="department" value="${item?.department ?? ""}" required>
+        </div>
+        <div class="form-field">
+          <label>Unit</label>
+          <input type="number" name="unit" value="${item?.unit ?? ""}" min="1" max="6" required>
+        </div>
+      </div>
+    `;
+  }
+
+  if(type === "assignments"){
+    html = `
+      <div class="form-row">
+        <div class="form-field">
+          <label>ID</label>
+          <input type="text" name="id" value="${item?.id ?? ""}" ${editorState.mode==="edit" ? "readonly" : ""} required>
+        </div>
+        <div class="form-field">
+          <label>Title</label>
+          <input type="text" name="title" value="${item?.title ?? ""}" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Course</label>
+          <input type="text" name="course" value="${item?.course ?? ""}" placeholder="e.g., CSC101" required>
+        </div>
+        <div class="form-field">
+          <label>Due Date</label>
+          <input type="date" name="due" value="${item?.due ?? ""}" required>
+        </div>
+      </div>
+    `;
+  }
+
+  formFields.innerHTML = html;
+}
+
+// Save (Add/Edit)
+form.addEventListener("submit", (e)=>{
+  e.preventDefault();
+  const fd = new FormData(form);
+  const type = editorState.type;
+
+  if(type === "lecturers"){
+    const payload = {
+      id: Number(fd.get("id")),
+      name: fd.get("name").trim(),
+      email: fd.get("email").trim(),
+      department: fd.get("department").trim(),
+    };
+    if(editorState.mode === "add"){
+      db.lecturers.push(payload);
+    } else {
+      const idx = db.lecturers.findIndex(x => x.id === Number(editorState.key));
+      if(idx > -1) db.lecturers[idx] = payload;
+    }
+    renderLecturers();
+  }
+
+  if(type === "students"){
+    const payload = {
+      id: Number(fd.get("id")),
+      name: fd.get("name").trim(),
+      email: fd.get("email").trim(),
+      level: fd.get("level").trim(),
+    };
+    if(editorState.mode === "add"){
+      db.students.push(payload);
+    } else {
+      const idx = db.students.findIndex(x => x.id === Number(editorState.key));
+      if(idx > -1) db.students[idx] = payload;
+    }
+    renderStudents();
+  }
+
+  if(type === "courses"){
+    const payload = {
+      code: fd.get("code").trim().toUpperCase(),
+      title: fd.get("title").trim(),
+      department: fd.get("department").trim(),
+      unit: Number(fd.get("unit")),
+    };
+    if(editorState.mode === "add"){
+      db.courses.push(payload);
+    } else {
+      const idx = db.courses.findIndex(x => String(x.code) === String(editorState.key));
+      if(idx > -1) db.courses[idx] = payload;
+    }
+    renderCourses();
+  }
+
+  if(type === "assignments"){
+    const payload = {
+      id: fd.get("id").trim(),
+      title: fd.get("title").trim(),
+      course: fd.get("course").trim().toUpperCase(),
+      due: fd.get("due")
+    };
+    if(editorState.mode === "add"){
+      db.assignments.push(payload);
+    } else {
+      const idx = db.assignments.findIndex(x => String(x.id) === String(editorState.key));
+      if(idx > -1) db.assignments[idx] = payload;
+    }
+    renderAssignments();
+  }
+
+  toast(editorState.mode === "add" ? "Created successfully" : "Updated successfully");
+  closeModal();
+});
+
+// ====== EVENT DELEGATION FOR EDIT/DELETE/ADD ======
+document.addEventListener("click", (e)=>{
+  // Add new
+  const addBtn = e.target.closest("[data-add]");
+  if(addBtn){
+    const type = addBtn.getAttribute("data-add");
+    openModal({ mode:"add", type });
+    return;
+  }
+
+  // Edit/Delete in any table row
+  const row = e.target.closest("tr[data-type]");
+  if(row){
+    const { type, key } = getCollectionAndKey(row);
+
+    // Edit
+    if(e.target.matches("[data-edit]")){
+      openModal({ mode:"edit", type, key });
+      return;
+    }
+
+    // Delete
+    if(e.target.matches("[data-delete]")){
+      if(confirm("Delete this " + type.slice(0,-1) + "?")){
+        removeFromCollection(type, key);
+        // re-render only that table
+        if(type === "lecturers") renderLecturers();
+        if(type === "students") renderStudents();
+        if(type === "courses") renderCourses();
+        if(type === "assignments") renderAssignments();
+        toast("Deleted successfully");
+      }
+      return;
+    }
+  }
+});
+
+
+// ====== INIT ======
+renderAll();
+
+  
+</script>
+  <script src="admin.js"></script>
 </body>
 </html>
-
